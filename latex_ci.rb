@@ -1,5 +1,8 @@
 require 'sinatra'
 require 'json'
+require 'git'
+
+repo = ''
 
 get '/' do
   'Latex-CI'
@@ -11,6 +14,19 @@ post '/build' do
 
   case event_type
   when 'push'
-    payload
+    if File.directory?('project')
+      g = Git.open('project')
+      g.pull
+
+      Dir.chdir 'project'
+      system("latexmk -c")
+      system("latexmk > log.txt")
+    else
+      g = Git.clone(repo, 'project')
+    end
   end
+end
+
+get '/log' do
+  File.read(File.join(File.dirname(__FILE__), 'project/log.txt'))
 end
