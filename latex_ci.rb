@@ -9,17 +9,20 @@ end
 post '/build' do
   payload = JSON.parse params[:payload]
   repo = payload['repository']
+  branch = payload['ref'][/([^\/]+)$/]
   event_type = request.env['HTTP_X_GITHUB_EVENT']
 
   case event_type
   when 'push'
-    pull_repo repo
-    build_repo repo
+    pull_repo repo, branch
+    exitcode = build_repo repo, branch
   end
+
+  return
 end
 
-def pull_repo(repo)
-  repo_dir = "builds/#{repo['name']}"
+def pull_repo(repo, branch)
+  repo_dir = "builds/#{repo['name']}/#{branch}"
   repo_url = repo['url']
 
   if File.directory? repo_dir
@@ -30,10 +33,17 @@ def pull_repo(repo)
   end
 end
 
-def build_repo(repo)
-  repo_dir = "builds/#{repo['name']}"
+def build_repo(repo, branch)
+  repo_dir = "builds/#{repo['name']}/#{branch}"
 
   Dir.chdir repo_dir
+
   system 'latexmk -c'
-  system 'latexmk > log.txt'
+  system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
+
+  exitcode = $?.to_i
+
+  Dir.chdir "../../../"
+
+  exitcode
 end
