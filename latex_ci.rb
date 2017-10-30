@@ -2,6 +2,8 @@ require 'sinatra'
 require 'json'
 require 'git'
 
+batch_file_types = ["svg", "png", "jpg"]
+
 get '/' do
   'Latex-CI'
 end
@@ -19,6 +21,24 @@ post '/build' do
   end
 
   return
+end
+
+get '/:user/:repository.:file_type' do
+  @user = params[:user]
+  @repository = params[:repository]
+  @branch = params[:branch]
+  @token = params[:token]
+  @file_type = params[:file_type]
+
+  content_type @file_type
+
+  not_found unless batch_file_types.include? @file_type
+
+  erb :batch
+end
+
+not_found do
+  status 404
 end
 
 def pull_repo(repo, branch)
