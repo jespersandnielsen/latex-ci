@@ -1,8 +1,13 @@
 require 'sinatra'
 require 'json'
 require 'git'
+require 'octokit'
 
 batch_file_types = ["svg"]
+
+before do
+  @gh_client ||= Octokit::Client.new(access_token: ENV['TOKEN'])
+end
 
 get '/' do
   'Latex-CI'
@@ -14,6 +19,8 @@ post '/build' do
   branch = payload['ref'][/([^\/]+)$/]
   event_type = request.env['HTTP_X_GITHUB_EVENT']
 
+  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'pending')
+
   case event_type
   when 'push'
     pull_repo repo, branch
@@ -23,11 +30,18 @@ post '/build' do
   return
 end
 
-get '/:owner/:repository.:file_type' do
+get '/:owner/:repo.:file_type' do
   @file_type = params[:file_type]
+  owner = params[:owner]
+  repo = params[:repo]
+  branch = params[:branch]
 
   content_type @file_type
   not_found unless batch_file_types.include? @file_type
+
+  # status = @gh_client.combined_status "#{owner}/#{repo}", branch
+
+  # p status
 
   @build_status = :passing
   # @build_status = :failing
@@ -54,6 +68,8 @@ def build_repo(repo, branch)
 
   system 'latexmk -c'
   system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
+
+  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'success')
 
   exitcode = $?.to_i
 

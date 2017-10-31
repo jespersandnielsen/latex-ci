@@ -11,6 +11,7 @@
 /test/version_tmp/
 /tmp/
 builds/
+.env
 
 # Used by dotenv library to load environment variables.
 # .env
