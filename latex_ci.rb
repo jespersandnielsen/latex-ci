@@ -1,20 +1,23 @@
 require 'sinatra'
 require 'json'
 require 'git'
+require 'octokit'
 
-get '/' do
-  'Latex-CI'
+before do
+  @gh_client ||= Octokit::Client.new(access_token: ENV['TOKEN'])
 end
 
 post '/build' do
-  payload = JSON.parse params[:payload]
-  repo = payload['repository']
+  @payload = JSON.parse params[:payload]
+  @repo = @payload['repository']
   event_type = request.env['HTTP_X_GITHUB_EVENT']
+
+  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'pending')
 
   case event_type
   when 'push'
-    pull_repo repo
-    build_repo repo
+    pull_repo @repo
+    build_repo @repo
   end
 end
 
@@ -35,5 +38,9 @@ def build_repo(repo)
 
   Dir.chdir repo_dir
   system 'latexmk -c'
-  system 'latexmk > log.txt'
+
+  log = system 'latexmk > log.txt'
+
+  p "AAAAAAAAA: #{log}"
+  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'success')
 end
