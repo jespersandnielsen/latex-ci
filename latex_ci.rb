@@ -3,7 +3,7 @@ require 'json'
 require 'git'
 require 'octokit'
 
-batch_file_types = ["svg", "png", "jpg"]
+batch_file_types = %w(svg png jpg)
 
 before do
   @gh_client ||= Octokit::Client.new(access_token: ENV['TOKEN'])
