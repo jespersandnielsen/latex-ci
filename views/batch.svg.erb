@@ -1,0 +1,34 @@
+<%
+if @build_status == :passing
+  color = "#4c1"
+  batch_width = {
+    status: 53,
+    full_size: 90,
+    text_offset: 62.5
+  }
+elsif @build_status == :failing
+  color = "#e05d44"
+  batch_width = {
+    status: 44,
+    full_size: 81,
+    text_offset: 58
+  }
+end
+%>
+
+<svg xmlns="http://www.w3.org/2000/svg" width="<%= batch_width[:full_size] %>" height="20">
+  <linearGradient id="a" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <rect rx="3" width="<%= batch_width[:full_size] %>" height="20" fill="#555"/>
+  <rect rx="3" x="37" width="<%= batch_width[:status] %>" height="20" fill="<%= color %>"/>
+  <path fill="<%= color %>" d="M37 0h4v20h-4z"/>
+  <rect rx="3" width="<%= batch_width[:full_size] %>" height="20" fill="url(#a)"/>
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="19.5" y="15" fill="#010101" fill-opacity=".3">build</text>
+    <text x="19.5" y="14">build</text>
+    <text x="<%= batch_width[:text_offset] %>" y="15" fill="#010101" fill-opacity=".3"><%= @build_status %></text>
+    <text x="<%= batch_width[:text_offset] %>" y="14"><%= @build_status %></text>
+  </g>
+</svg>

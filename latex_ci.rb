@@ -2,7 +2,7 @@ require 'sinatra'
 require 'json'
 require 'git'
 
-batch_file_types = ["svg", "png", "jpg"]
+batch_file_types = ["svg"]
 
 get '/' do
   'Latex-CI'
@@ -23,22 +23,16 @@ post '/build' do
   return
 end
 
-get '/:user/:repository.:file_type' do
-  @user = params[:user]
-  @repository = params[:repository]
-  @branch = params[:branch]
-  @token = params[:token]
+get '/:owner/:repository.:file_type' do
   @file_type = params[:file_type]
 
   content_type @file_type
-
   not_found unless batch_file_types.include? @file_type
 
-  erb :batch
-end
+  @build_status = :passing
+  # @build_status = :failing
 
-not_found do
-  status 404
+  render_view :batch
 end
 
 def pull_repo(repo, branch)
@@ -66,4 +60,12 @@ def build_repo(repo, branch)
   Dir.chdir "../../../"
 
   exitcode
+end
+
+def render_view(view)
+  erb "#{view}.#{@file_type}".to_sym
+end
+
+not_found do
+  status 404
 end
