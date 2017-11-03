@@ -45,8 +45,15 @@ get '/:owner/:repo.:file_type' do
 
   p status
 
-  @build_status = :passing
-  # @build_status = :failing
+  p status[:statuses].last
+
+  @build_status = case status[:statuses].last[:success]
+    when "failure" then :failing
+    when "error" then :failing
+    when "success" then :passing
+  end
+
+  p @build_status
 
   render_view :batch
 end
