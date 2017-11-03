@@ -19,13 +19,15 @@ post '/build' do
   branch = payload['ref'][/([^\/]+)$/]
   event_type = request.env['HTTP_X_GITHUB_EVENT']
 
-  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'pending')
+  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], 'pending')
 
   case event_type
   when 'push'
     pull_repo repo, branch
     exitcode = build_repo repo, branch
   end
+
+  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], 'success') if exitcode == 0
 
   return
 end
@@ -39,9 +41,9 @@ get '/:owner/:repo.:file_type' do
   content_type @file_type
   not_found unless batch_file_types.include? @file_type
 
-  # status = @gh_client.combined_status "#{owner}/#{repo}", branch
+  status = @gh_client.combined_status "#{owner}/#{repo}", branch
 
-  # p status
+  p status
 
   @build_status = :passing
   # @build_status = :failing
@@ -68,8 +70,6 @@ def build_repo(repo, branch)
 
   system 'latexmk -c'
   system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
-
-  @gh_client.create_status(@repo['full_name'], @payload['head_commit']['id'], 'success')
 
   exitcode = $?.to_i
 
