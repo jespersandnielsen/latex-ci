@@ -4,6 +4,7 @@ require 'git'
 require 'octokit'
 
 batch_file_types = %w(svg)
+build_context = "latex-ci-build"
 
 before do
   @gh_client ||= Octokit::Client.new(access_token: ENV['TOKEN'])
@@ -19,7 +20,7 @@ post '/build' do
   branch = payload['ref'][/([^\/]+)$/]
   event_type = request.env['HTTP_X_GITHUB_EVENT']
 
-  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], 'pending')
+  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], :pending, options: { context: build_context })
 
   case event_type
   when 'push'
@@ -27,7 +28,12 @@ post '/build' do
     exitcode = build_repo repo, branch
   end
 
-  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], 'success') if exitcode == 0
+  status = case exitcode
+  when 0 then :success
+  else :failure
+  end
+
+  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], status, options: { context: build_context })
 
   return
 end
@@ -41,19 +47,18 @@ get '/:owner/:repo.:file_type' do
   content_type @file_type
   not_found unless batch_file_types.include? @file_type
 
-  status = @gh_client.combined_status "#{owner}/#{repo}", branch
+  statuses = @gh_client.combined_status("#{owner}/#{repo}", branch).where(context: build_context)
 
-  p status
+  p statuses
 
-  p status[:statuses].last
+  state = statuses.last[:state] if statuses.respond_to?(:last)
+  state = :success if state.nil?
 
-  @build_status = case status[:statuses].last[:success]
-    when "failure" then :failing
-    when "error" then :failing
-    when "success" then :passing
+  @build_status = case state
+    when :failure then :failing
+    when :error then :failing
+    when :success then :passing
   end
-
-  p @build_status
 
   render_view :batch
 end
