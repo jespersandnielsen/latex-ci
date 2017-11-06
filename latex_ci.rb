@@ -1,13 +1,18 @@
+require 'sidekiq'
 require 'sinatra'
 require 'json'
-require 'git'
-require 'octokit'
+require './github_client'
+require_relative 'lib/build_worker'
 
 batch_file_types = %w(svg)
 build_context = "latex-ci-build"
 
+Sidekiq.configure_client do |config|
+  config.redis = { url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}" }
+end
+
 before do
-  @gh_client ||= Octokit::Client.new(access_token: ENV['TOKEN'])
+  @gh_client ||= GithubClient.client
 end
 
 get '/' do
@@ -16,24 +21,16 @@ end
 
 post '/build' do
   payload = JSON.parse params[:payload]
-  repo = payload['repository']
-  branch = payload['ref'][/([^\/]+)$/]
-  event_type = request.env['HTTP_X_GITHUB_EVENT']
 
-  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], :pending, options: { context: build_context })
+  data = {
+    id: payload['head_commit']['id'],
+    repo: payload['repository'],
+    branch: payload['ref'][/([^\/]+)$/],
+    event_type: request.env['HTTP_X_GITHUB_EVENT'],
+    build_context: build_context
+  }
 
-  case event_type
-  when 'push'
-    pull_repo repo, branch
-    exitcode = build_repo repo, branch
-  end
-
-  status = case exitcode
-  when 0 then :success
-  else :failure
-  end
-
-  @gh_client.create_status(repo['full_name'], payload['head_commit']['id'], status, options: { context: build_context })
+  BuildWorker.perform_async(data)
 
   return
 end
@@ -61,33 +58,6 @@ get '/:owner/:repo.:file_type' do
   end
 
   render_view :batch
-end
-
-def pull_repo(repo, branch)
-  repo_dir = "builds/#{repo['name']}/#{branch}"
-  repo_url = repo['url']
-
-  if File.directory? repo_dir
-    g = Git.open repo_dir
-    g.pull
-  else
-    g = Git.clone repo_url, repo_dir
-  end
-end
-
-def build_repo(repo, branch)
-  repo_dir = "builds/#{repo['name']}/#{branch}"
-
-  Dir.chdir repo_dir
-
-  system 'latexmk -c'
-  system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
-
-  exitcode = $?.to_i
-
-  Dir.chdir "../../../"
-
-  exitcode
 end
 
 def render_view(view)
