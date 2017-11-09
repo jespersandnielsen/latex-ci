@@ -7,10 +7,9 @@ class RepoBuilder
 
     @id = params["id"]
     @repo = params["repo"]
-    @branch = params["branch"]
     @build_context = params["build_context"]
     @event_type = params["event_type"]
-    @repo_dir = "builds/#{@repo['name']}/#{@branch}"
+    @repo_dir = "builds/#{@repo['name']}"
   end
 
   def build
