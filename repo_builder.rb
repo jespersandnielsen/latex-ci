@@ -9,6 +9,7 @@ class RepoBuilder
     @branch = params["branch"]
     @build_context = params["build_context"]
     @event_type = params["event_type"]
+    @repo_dir = "builds/#{@repo['name']}/#{@branch}"
   end
 
   def build
@@ -31,29 +32,23 @@ class RepoBuilder
 private
 
   def pull_repo
-    repo_dir = "builds/#{@repo['name']}/#{@branch}"
     repo_url = @repo['url']
 
-    if File.directory? repo_dir
-      g = Git.open repo_dir
+    if File.directory? @repo_dir
+      g = Git.open @repo_dir
       g.pull
     else
-      g = Git.clone repo_url, repo_dir
+      g = Git.clone repo_url, @repo_dir
     end
   end
 
   def build_repo
-    repo_dir = "builds/#{@repo['name']}/#{@branch}"
+    Dir.chdir @repo_dir do
 
-    Dir.chdir repo_dir
+      system 'latexmk -c'
+      system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
 
-    system 'latexmk -c'
-    system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
-
-    exitcode = $?.to_i
-
-    Dir.chdir "../../../"
-
-    exitcode
+      $?.to_i
+    end
   end
 end
