@@ -42,7 +42,7 @@ private
       g = Git.clone repo_url, @repo_dir
     end
 
-    g.branch(@branch).checkout
+    g.checkout @id
   end
 
   def build_repo
