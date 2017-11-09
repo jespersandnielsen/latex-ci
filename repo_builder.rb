@@ -1,4 +1,5 @@
 require 'git'
+require './command_runner'
 
 class RepoBuilder
   def initialize(gh_client, params)
@@ -40,15 +41,14 @@ private
     else
       g = Git.clone repo_url, @repo_dir
     end
+
+    g.branch(@branch).checkout
   end
 
   def build_repo
     Dir.chdir @repo_dir do
-
-      system 'latexmk -c'
-      system 'latexmk -interaction=nonstopmode -halt-on-error > log.txt'
-
-      $?.to_i
+      CommandRunner.new('latexmk -c').run
+      CommandRunner.new('latexmk -interaction=nonstopmode -halt-on-error > log.txt').run
     end
   end
 end
