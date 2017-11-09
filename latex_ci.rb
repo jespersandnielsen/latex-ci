@@ -45,8 +45,6 @@ get '/:owner/:repo.:file_type' do
 
   statuses = @gh_client.combined_status("#{owner}/#{repo}", branch).where(context: build_context)
 
-  p statuses
-
   state = statuses.last[:state] if statuses.respond_to?(:last)
   state = :success if state.nil?
 
