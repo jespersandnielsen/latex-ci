@@ -62,7 +62,5 @@ private
       # publish coverage result
       exitcode = CommandRunner.new("build.ps1 --publish --branch #{@branch}").run unless exitcode == 0
     end
-
-    exitcode
   end
 end
