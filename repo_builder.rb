@@ -10,7 +10,7 @@ class RepoBuilder
     @branch = arguments["branch"]
     @build_context = arguments["build_context"]
     @event_type = arguments["event_type"]
-    @repo_dir = "builds/#{@repo['name']}"
+    @dir = "builds/#{@repo['name']}-#{Time.now.getutc}"
   end
 
   def build
@@ -20,6 +20,7 @@ class RepoBuilder
     when 'push'
       pull_repo
       exitcode = build_repo
+      delete_repo
     end
 
     status = case exitcode
@@ -35,32 +36,36 @@ private
   def pull_repo
     repo_url = @repo['url']
 
-    if File.directory? @repo_dir
-      g = Git.open @repo_dir
+    if File.directory? @dir
+      g = Git.open @dir
       g.fetch
     else
-      g = Git.clone repo_url, @repo_dir
+      g = Git.clone repo_url, @dir
     end
 
     g.checkout @id
   end
 
   def build_repo
-    exitcode = CommandRunner.run "dotnet clean", @repo_dir
-    exitcode = CommandRunner.run "dotnet restore --packages packages", @repo_dir if exitcode == 0
-    exitcode = CommandRunner.run "dotnet build -c Debug /warnaserror", @repo_dir if exitcode == 0
+    exitcode = CommandRunner.run "dotnet clean", @dir
+    exitcode = CommandRunner.run "dotnet restore --packages packages", @dir if exitcode == 0
+    exitcode = CommandRunner.run "dotnet build -c Debug /warnaserror", @dir if exitcode == 0
 
     # Test
-    exitcode = CommandRunner.run "dotnet test test/Petra.Test/Petra.Test.csproj", @repo_dir if exitcode == 0
-    exitcode = CommandRunner.run "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj", @repo_dir if exitcode == 0
-    # exitcode = CommandRunner.run "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj", @repo_dir if exitcode == 0
+    exitcode = CommandRunner.run "dotnet test test/Petra.Test/Petra.Test.csproj", @dir if exitcode == 0
+    exitcode = CommandRunner.run "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj", @dir if exitcode == 0
+    # exitcode = CommandRunner.run "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj", @dir if exitcode == 0
 
     # Code coverage
-    exitcode = CommandRunner.run "./build.ps1 --codecoverage", @repo_dir unless exitcode == 0
+    exitcode = CommandRunner.run "./build.ps1 --codecoverage", @dir unless exitcode == 0
 
     # publish coverage result
-    exitcode = CommandRunner.run "./build.ps1 --publish --branch #{@branch}", @repo_dir unless exitcode == 0
+    exitcode = CommandRunner.run "./build.ps1 --publish --branch #{@branch}", @dir unless exitcode == 0
 
     exitcode
+  end
+
+  def delete_repo
+    Dir.rmdir @dir, verbose: true, noop: true
   end
 end
