@@ -25,6 +25,7 @@ post '/build' do
   data = {
     id: payload['head_commit']['id'],
     repo: payload['repository'],
+    branch: payload['ref'][/([^\/]+)$/],
     event_type: request.env['HTTP_X_GITHUB_EVENT'],
     build_context: build_context
   }

@@ -2,13 +2,14 @@ require 'git'
 require './command_runner'
 
 class RepoBuilder
-  def initialize(gh_client, params)
+  def initialize(gh_client, arguments)
     @gh_client = gh_client
 
-    @id = params["id"]
-    @repo = params["repo"]
-    @build_context = params["build_context"]
-    @event_type = params["event_type"]
+    @id = arguments["id"]
+    @repo = arguments["repo"]
+    @branch = arguments["branch"]
+    @build_context = arguments["build_context"]
+    @event_type = arguments["event_type"]
     @repo_dir = "builds/#{@repo['name']}"
   end
 
@@ -46,8 +47,23 @@ private
 
   def build_repo
     Dir.chdir @repo_dir do
-      CommandRunner.new('latexmk -c').run
-      CommandRunner.new('latexmk -interaction=nonstopmode -halt-on-error > log.txt').run
+      exitcode = CommandRunner.new("dotnet clean").run
+      exitcode = CommandRunner.new("dotnet restore --packages packages").run unless exitcode == 0
+      exitcode = CommandRunner.new("dotnet build -c Debug /warnaserror").run unless exitcode == 0
+
+      # Test
+      exitcode = CommandRunner.new("dotnet test test/Petra.Test/Petra.Test.csproj").run unless exitcode == 0
+      exitcode = CommandRunner.new("dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj").run unless exitcode == 0
+      exitcode = CommandRunner.new("dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj").run unless exitcode == 0
+
+      # Code coverage
+      exitcode = CommandRunner.new("build.ps1 --codecoverage").run unless exitcode == 0
+
+      # publish coverage result
+      exitcode = CommandRunner.new("build.ps1 --publish --branch #{@branch}").run unless exitcode == 0
+      end
     end
+
+    exitcode
   end
 end
