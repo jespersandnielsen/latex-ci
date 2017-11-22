@@ -46,22 +46,20 @@ private
   end
 
   def build_repo
-    Dir.chdir @repo_dir do
-      exitcode = run_command "dotnet clean"
-      exitcode = run_command "dotnet restore --packages packages" unless exitcode == 0
-      exitcode = run_command "dotnet build -c Debug /warnaserror" unless exitcode == 0
+    exitcode = run_command "dotnet clean"
+    exitcode = run_command "dotnet restore --packages packages" unless exitcode == 0
+    exitcode = run_command "dotnet build -c Debug /warnaserror" unless exitcode == 0
 
-      # Test
-      exitcode = run_command "dotnet test test/Petra.Test/Petra.Test.csproj" unless exitcode == 0
-      exitcode = run_command "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj" unless exitcode == 0
-      exitcode = run_command "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj" unless exitcode == 0
+    # Test
+    exitcode = run_command "dotnet test test/Petra.Test/Petra.Test.csproj" unless exitcode == 0
+    exitcode = run_command "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj" unless exitcode == 0
+    exitcode = run_command "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj" unless exitcode == 0
 
-      # Code coverage
-      exitcode = run_command "./build.ps1 --codecoverage" unless exitcode == 0
+    # Code coverage
+    exitcode = run_command "./build.ps1 --codecoverage" unless exitcode == 0
 
-      # publish coverage result
-      exitcode = run_command "./build.ps1 --publish --branch #{@branch}" unless exitcode == 0
-    end
+    # publish coverage result
+    exitcode = run_command "./build.ps1 --publish --branch #{@branch}" unless exitcode == 0
   end
 
   def run_command(cmd)
