@@ -1,10 +1,8 @@
 class CommandRunner
-  def initialize(cmd)
-    @cmd = cmd
-  end
-
-  def run
-    system @cmd
+  def self.run(cmd, dir)
+    Dir.chdir dir do
+      system cmd
+    end
 
     $?.to_i
   end

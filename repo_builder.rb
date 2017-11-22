@@ -37,7 +37,7 @@ private
 
     if File.directory? @repo_dir
       g = Git.open @repo_dir
-      g.pull
+      g.fetch
     else
       g = Git.clone repo_url, @repo_dir
     end
@@ -46,25 +46,19 @@ private
   end
 
   def build_repo
-    exitcode = run_command "dotnet clean"
-    exitcode = run_command "dotnet restore --packages packages" unless exitcode == 0
-    exitcode = run_command "dotnet build -c Debug /warnaserror" unless exitcode == 0
+    exitcode = CommandRunner.run "dotnet clean", @repo_dir
+    exitcode = CommandRunner.run "dotnet restore --packages packages" unless exitcode == 0
+    exitcode = CommandRunner.run "dotnet build -c Debug /warnaserror" unless exitcode == 0
 
     # Test
-    exitcode = run_command "dotnet test test/Petra.Test/Petra.Test.csproj" unless exitcode == 0
-    exitcode = run_command "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj" unless exitcode == 0
-    exitcode = run_command "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj" unless exitcode == 0
+    exitcode = CommandRunner.run "dotnet test test/Petra.Test/Petra.Test.csproj" unless exitcode == 0
+    exitcode = CommandRunner.run "dotnet test test/Petra.Api.Test/Petra.Api.Test.csproj" unless exitcode == 0
+    exitcode = CommandRunner.run "dotnet test test/Petra.Model.Test/Petra.Model.Test.csproj" unless exitcode == 0
 
     # Code coverage
-    exitcode = run_command "./build.ps1 --codecoverage" unless exitcode == 0
+    # exitcode = CommandRunner.run "./build.ps1 --codecoverage" unless exitcode == 0
 
     # publish coverage result
-    exitcode = run_command "./build.ps1 --publish --branch #{@branch}" unless exitcode == 0
-  end
-
-  def run_command(cmd)
-    Dir.chdir @repo_dir do
-      CommandRunner.new("dotnet clean").run
-    end
+    # exitcode = CommandRunner.run "./build.ps1 --publish --branch #{@branch}" unless exitcode == 0
   end
 end
