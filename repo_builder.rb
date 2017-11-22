@@ -36,12 +36,12 @@ private
   def pull_repo
     repo_url = @repo['url']
 
-    if File.directory? @dir
-      g = Git.open @dir
-      g.fetch
-    else
-      g = Git.clone repo_url, @dir
-    end
+    # if File.directory? @dir
+    #   g = Git.open @dir
+    #   g.fetch
+    # else
+    g = Git.clone repo_url, @dir
+    # end
 
     g.checkout @id
   end
