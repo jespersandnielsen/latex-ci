@@ -14,7 +14,7 @@ class BuildWorker
   end
 
   def perform(params)
-    repo_builder = RepoBuilder.new(@gh_client, params).build
+    RepoBuilder.new(@gh_client, params).build
   end
 
 end
